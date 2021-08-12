@@ -1,0 +1,33 @@
+--Average per person library visits by state vs usa average
+--joins library data and census data
+WITH
+	population_total (st, state_population) AS
+		(
+			SELECT		
+				state_us_abbreviation
+				,sum(p0010001) AS state_population
+			FROM us_counties_2010
+			GROUP BY state_us_abbreviation
+			ORDER BY state_population DESC
+		),
+	visits_total (st, state_visits) AS
+		(
+			SELECT
+				stabr
+				,sum(visits) AS visits
+			FROM pls_fy2014_pupld14a
+			WHERE visits > 0
+			GROUP BY stabr
+			ORDER BY visits DESC
+		)
+SELECT 
+	vt.st AS state
+	,state_visits
+	,state_population
+	,round(cast(state_visits AS numeric) / state_population, 2) AS state_avg_visits_per_person
+	,round((SELECT cast(sum(visits) AS numeric) FROM pls_fy2014_pupld14a) / (SELECT sum(p0010001) FROM us_counties_2010),2) AS usa_avg_visits_per_person
+	,round((cast(state_visits AS numeric) / state_population) - ((SELECT cast(sum(visits) AS numeric) FROM pls_fy2014_pupld14a) / (SELECT sum(p0010001) FROM us_counties_2010)),2) AS difference
+FROM visits_total AS vt JOIN population_total AS pt
+	ON vt.st = pt.st
+ORDER BY state_avg_visits_per_person DESC
+;
